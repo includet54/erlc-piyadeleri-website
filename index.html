@@ -96,9 +96,9 @@
         .footer h3 { margin: 10px 0 5px 0; font-size: 16px; }
         
         /* Ekstra Discord Kanalları (Animasyonlu Kayan Yazı) */
-        .extra-channels { margin-top: 20px; width: 100%; overflow: hidden; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; }
-        .marquee { display: flex; gap: 30px; animation: scrollText 15s linear infinite; white-space: nowrap; }
-        .marquee a { color: #00c6ff; text-decoration: none; font-weight: bold; }
+        .extra-channels { margin-top: 20px; width: 100%; overflow: hidden; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; min-height: 55px; display: flex; align-items: center; }
+        .marquee { display: flex; gap: 30px; animation: scrollText 15s linear infinite; white-space: nowrap; width: 100%; }
+        .marquee a { color: #00c6ff; text-decoration: none; font-weight: bold; font-size: 16px; }
         @keyframes scrollText { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
 
     </style>
