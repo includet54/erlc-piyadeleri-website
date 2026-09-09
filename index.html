@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Polat - Sunucu Yönetim Paneli</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
+        
+        body, html { width: 100%; height: 100%; overflow: hidden; background-color: #050505; color: white; }
+
+        /* Arka Plan: Buğulu Cam ve Polis Çakarları */
+        #bg-container {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(15px); /* Buğulu cam efekti */
+            -webkit-backdrop-filter: blur(15px);
+        }
+        .police-light {
+            position: absolute; top: 50%; width: 50vw; height: 50vw;
+            border-radius: 50%; opacity: 0; filter: blur(80px); mix-blend-mode: screen;
+            animation: flash 2s infinite;
+        }
+        .light-red { left: -10%; background: radial-gradient(circle, rgba(255,0,0,0.8) 0%, transparent 70%); animation-delay: 0s; }
+        .light-blue { right: -10%; background: radial-gradient(circle, rgba(0,0,255,0.8) 0%, transparent 70%); animation-delay: 1s; }
+
+        @keyframes flash {
+            0%, 100% { opacity: 0.1; }
+            50% { opacity: 0.8; transform: scale(1.2); }
+        }
+
+        /* Genel Ekran Ayarları */
+        .screen { display: none; width: 100%; height: 100%; flex-direction: column; align-items: center; justify-content: center; padding: 20px; overflow-y: auto; text-align: center; }
+        .active-screen { display: flex; }
+        .glass-panel { background: rgba(255, 255, 255, 0.05); padding: 30px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(10px); box-shadow: 0 15px 25px rgba(0,0,0,0.5); width: 100%; max-width: 500px; }
+        
+        input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: none; background: rgba(255,255,255,0.1); color: white; outline: none; transition: 0.3s; }
+        input:focus { background: rgba(255,255,255,0.2); }
+        
+        button { width: 100%; padding: 15px; margin: 10px 0; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.3s; font-size: 16px; background: linear-gradient(45deg, #ff416c, #ff4b2b); color: white; }
+        button:hover { transform: scale(1.05); box-shadow: 0 0 15px rgba(255, 65, 108, 0.5); }
+
+        /* Müzik Çalar */
+        #audio-player { position: fixed; top: 20px; left: 20px; background: rgba(0,0,0,0.6); padding: 10px 15px; border-radius: 20px; display: flex; align-items: center; gap: 15px; z-index: 100; border: 1px solid rgba(255,255,255,0.1); }
+        #audio-player i { cursor: pointer; transition: 0.2s; }
+        #audio-player i:hover { color: #ff416c; }
+
+        /* Gizli Kurucu Girişi Butonu */
+        #secret-admin-btn { position: fixed; bottom: 10px; right: 10px; width: 20px; height: 20px; background: transparent; border: none; cursor: crosshair; z-index: 100; }
+
+        /* Ana Menü Özel Stiller */
+        .server-header { margin-bottom: 30px; cursor: pointer; transition: 0.3s; text-decoration: none; color: white; display: block; }
+        .server-header:hover { transform: scale(1.05); }
+        .server-header img { width: 100px; height: 100px; border-radius: 50%; border: 3px solid #fff; object-fit: cover; box-shadow: 0 0 20px rgba(255,255,255,0.5); margin-bottom: 10px; }
+        
+        .menu-btn { font-size: 18px; padding: 20px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); backdrop-filter: blur(5px); display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .menu-btn:hover { background: rgba(255,255,255,0.2); }
+
+        /* Dinamik Sayfalar & Animasyonlar */
+        .content-page { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 50; padding: 50px 20px; overflow-y: auto; flex-direction: column; align-items: center; }
+        .close-btn { position: absolute; top: 20px; right: 30px; font-size: 30px; cursor: pointer; color: white; z-index: 60; }
+        
+        /* 1. Kurallar (Kırmızı/Siyah Hareketli) */
+        #page-rules { background: linear-gradient(45deg, #000000, #430000, #000000); background-size: 400% 400%; animation: gradientBG 10s ease infinite; }
+        .rules-list { text-align: left; background: rgba(0,0,0,0.6); padding: 30px; border-radius: 15px; max-width: 800px; line-height: 1.8; }
+        
+        /* 2. Oyunlar (Siyah/Beyaz Hareketli) */
+        #page-games { background: linear-gradient(45deg, #111, #444, #111); background-size: 400% 400%; animation: gradientBG 10s ease infinite; }
+        .game-card { background: rgba(0,0,0,0.7); padding: 20px; border-radius: 15px; display: flex; align-items: center; gap: 20px; max-width: 600px; cursor: pointer; transition: 0.3s; text-decoration: none; color: white; border: 1px solid rgba(255,255,255,0.1); }
+        .game-card:hover { transform: scale(1.05); border-color: white; }
+        .game-card img { width: 80px; height: 80px; border-radius: 10px; }
+
+        /* 3. Destek (Gece Şehir Bulanık) */
+        #page-support { background: url('Ekran Kaydı 2026-08-12 225502 (1).jpg') no-repeat center center/cover; }
+        #page-support::before { content: ''; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(10px); z-index: -1; }
+        .support-links a { display: block; background: rgba(88, 101, 242, 0.8); padding: 15px; margin: 15px 0; border-radius: 8px; color: white; text-decoration: none; font-weight: bold; transition: 0.3s; }
+        .support-links a:hover { background: #5865F2; transform: scale(1.05); }
+        
+        /* 4. İstek Öneri (Mor/Mavi Hareketli) */
+        #page-requests { background: linear-gradient(45deg, #240b36, #c31432); background-size: 400% 400%; animation: gradientBG 10s ease infinite; }
+        textarea { width: 100%; height: 150px; background: rgba(255,255,255,0.8); color: black; border-radius: 8px; padding: 15px; outline: none; border: none; resize: none; font-size: 16px; margin-bottom: 10px; }
+        .submit-btn { width: auto; align-self: flex-start; padding: 10px 30px; background: #00c6ff; }
+
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Footer */
+        .footer { margin-top: 40px; text-align: center; font-size: 14px; background: rgba(0,0,0,0.5); padding: 20px; border-radius: 15px; width: 100%; max-width: 600px; }
+        .footer a { color: #ff416c; text-decoration: none; font-weight: bold; }
+        .footer h3 { margin: 10px 0 5px 0; font-size: 16px; }
+        
+        /* Ekstra Discord Kanalları (Animasyonlu Kayan Yazı) */
+        .extra-channels { margin-top: 20px; width: 100%; overflow: hidden; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; }
+        .marquee { display: flex; gap: 30px; animation: scrollText 15s linear infinite; white-space: nowrap; }
+        .marquee a { color: #00c6ff; text-decoration: none; font-weight: bold; }
+        @keyframes scrollText { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
+
+    </style>
+</head>
+<body>
+
+    <!-- Arka Plan Polis Çakarları -->
+    <div id="bg-container">
+        <div class="police-light light-red"></div>
+        <div class="police-light light-blue"></div>
+    </div>
+
+    <!-- Müzik Çalar -->
+    <div id="audio-player">
+        <i class="fas fa-backward" onclick="prevSong()"></i>
+        <i class="fas fa-play" id="play-pause-btn" onclick="togglePlay()"></i>
+        <i class="fas fa-forward" onclick="nextSong()"></i>
+        <span style="font-size: 12px; margin-left: 10px;">Radyo Aktif</span>
+    </div>
+
+    <!-- Gizli Admin Butonu (Sağ En Alt Köşe) -->
+    <button id="secret-admin-btn" onclick="showAdminLogin()"></button>
+
+    <!-- KAYIT EKRANI -->
+    <div id="register-screen" class="screen active-screen">
+        <div class="glass-panel">
+            <h2><i class="fas fa-id-card"></i> Sunucu Kayıt</h2>
+            <p style="margin-bottom: 20px; font-size: 12px; color: #ccc;">Sisteme bir kez kayıt olmanız yeterlidir.</p>
+            <input type="text" id="reg-name" placeholder="Gerçek Adınız">
+            <input type="url" id="reg-roblox" placeholder="Roblox Profil Linkiniz">
+            <input type="password" id="reg-pass" placeholder="Şifre Belirleyin">
+            <button onclick="registerUser()"><i class="fas fa-sign-in-alt"></i> Kayıt Ol ve Giriş Yap</button>
+        </div>
+    </div>
+
+    <!-- ANA MENÜ -->
+    <div id="main-menu" class="screen">
+        
+        <!-- Sunucu Linki (Tıklanabilir Header) -->
+        <a href="https://discord.gg/FeCkXmwRDa" target="_blank" class="server-header">
+            <img src="Ekran Kaydı 2026-08-12 225502 (1).jpg" alt="Sunucu Profil">
+            <h1>Discord Sunucumuza Katıl</h1>
+        </a>
+
+        <div class="glass-panel" style="max-width: 600px;">
+            <button class="menu-btn" onclick="openPage('page-rules')"><i class="fas fa-gavel"></i> Sunucu Kuralları</button>
+            <button class="menu-btn" onclick="openPage('page-games')"><i class="fas fa-gamepad"></i> Genellikle Oynanan Oyunlar</button>
+            <button class="menu-btn" onclick="openPage('page-support')"><i class="fas fa-headset"></i> Destek Kanalı</button>
+            <button class="menu-btn" onclick="openPage('page-requests')"><i class="fas fa-lightbulb"></i> İstek ve Öneri</button>
+        </div>
+
+        <div class="extra-channels glass-panel" style="max-width: 600px; padding: 10px;">
+            <div class="marquee">
+                <a href="https://discord.com/channels/1529545898294509589/1541355760829726760" target="_blank">📢 Duyurularımız</a> | 
+                <a href="https://discord.com/channels/1529545898294509589/1532828722158112779" target="_blank">💬 Günlük Sohbet</a> | 
+                <a href="https://discord.com/channels/1529545898294509589/1532829702274682890" target="_blank">🎭 Perm-Al</a> | 
+                <a href="https://discord.com/channels/1529545898294509589/1544809399296589885" target="_blank">🛒 Bot-Komut / Market</a>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <h3><i class="fab fa-instagram"></i> İnstagram sayfamız:</h3>
+            <a href="https://www.instagram.com/erlcpiyadeleri/" target="_blank">@erlcpiyadeleri</a>
+            <h3 style="margin-top: 15px;"><i class="fab fa-youtube"></i> Youtube sayfamız:</h3>
+            <a href="https://www.youtube.com/@RPservers-Privateservers" target="_blank">RPservers Privateservers</a>
+            <p style="margin-top: 15px; font-size: 16px;">💞💐🥰 Takip edip beğenirseniz , bizi ve ekibimizi mutlu edersiniz 🪷💮🪻</p>
+        </div>
+    </div>
+
+    <!-- SAYFALAR (MODALLAR) -->
+    
+    <!-- Kurallar Sayfası -->
+    <div id="page-rules" class="content-page">
+        <i class="fas fa-times close-btn" onclick="closePages()"></i>
+        <h1 style="margin-bottom: 20px; font-size: 40px; color: #ff4b2b;"># KURALLAR</h1>
+        <div class="rules-list">
+            <ul>
+                <li><strong>1-)</strong> Karşınızdaki kişi küfürlerinizden veya hakaretlerinizden rahatsızlık duyuyorsa bu davranışa devam etmeniz banlanmanız ile sonuçlanacaktır.</li>
+                <li><strong>2-)</strong> Reklam ve ticaret (hesap satışı, oyun satışı vs.) türevi herhangi bir davranış özel mesaj dahi olsa sunucumuzu güvenli tutmak için yasaktır.</li>
+                <li><strong>3-)</strong> Birbirinizin görüşlerine karşı nefret söylemi, hakaret, küfür tamamen yasaktır.</li>
+                <li><strong>4-)</strong> Cinsiyet farketmeksizin taciz yasaktır.</li>
+                <li><strong>5-)</strong> Kanalları doğru şekilde kullanın. (#bot-komut kanalında bot komutları, #sohbet kanalında sohbet.)</li>
+                <li><strong>6-)</strong> Cinsel içerikli herhangi bir içerik yasaktır.</li>
+                <li><strong>7-)</strong> Muhattabınız olan yetkili istemiyorsa o yetkiliye sunucu içinde hakaret yasaktır.</li>
+                <li><strong>8-)</strong> Karşınızdaki insanları zorbalamayın. Sunucudan insanların çıkmasından başka bir şeye yaramıyor.</li>
+                <li><strong>9-)</strong> Kendinize sunucu açıp buradaki insanları davet etmeyin. Sunucu ortamını bölüyorsunuz.</li>
+                <li><strong>10-)</strong> +18 gif, taciz, kız/erkek/küçük/büyük ayrımcılık yasaktır.</li>
+                <li><strong>11-)</strong> Irkçılık ve ayrımcılık yasaktır.</li>
+                <li style="color: #ff4b2b;"><strong>12-)</strong> Haddini aşan ve 1 günde en az 2x uyarı alan kişiler askıya alınacaktır!</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Oyunlar Sayfası -->
+    <div id="page-games" class="content-page">
+        <i class="fas fa-times close-btn" onclick="closePages()"></i>
+        <h1 style="margin-bottom: 30px; font-size: 35px;">Genellikle Oynanan Oyunlar</h1>
+        <a href="https://www.roblox.com/tr/games/2534724415/Emergency-Response-Liberty-County" target="_blank" class="game-card">
+            <img src="noFilter.webp" alt="ER:LC">
+            <div>
+                <h2>Acil Durum Müdahalesi: Liberty County</h2>
+                <p style="color: #ccc; font-size: 12px; margin-top:5px;">Oyuna gitmek için tıklayın.</p>
+            </div>
+        </a>
+    </div>
+
+    <!-- Destek Sayfası -->
+    <div id="page-support" class="content-page">
+        <i class="fas fa-times close-btn" onclick="closePages()"></i>
+        <div class="glass-panel" style="background: rgba(0,0,0,0.8);">
+            <h2><i class="fas fa-life-ring"></i> Destek Kanalı</h2>
+            <p style="margin-top: 15px;">Bizlere ilgili sorunları ya da talepleri aşağıdaki kanallardan iletebilirsiniz:</p>
+            <div class="support-links">
+                <a href="https://discord.com/channels/1529545898294509589/1534770099179884564" target="_blank"><i class="fas fa-ticket-alt"></i> Bilet Aç Kanalı</a>
+                <a href="https://discord.com/channels/1529545898294509589/1532829788824404274" target="_blank"><i class="fas fa-microphone"></i> Yardım Bekleme Ses Kanalı</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- İstek Öneri Sayfası -->
+    <div id="page-requests" class="content-page">
+        <i class="fas fa-times close-btn" onclick="closePages()"></i>
+        <div class="glass-panel" style="width: 100%; max-width: 700px; background: rgba(0,0,0,0.5);">
+            <h2 style="margin-bottom: 20px; font-size: 30px;">Sizin için ne yapabilirim ?</h2>
+            <div style="display: flex; flex-direction: column;">
+                <textarea id="suggestion-text" placeholder="İstek veya önerinizi buraya yazın..."></textarea>
+                <button class="submit-btn" onclick="sendSuggestion()"><i class="fas fa-paper-plane"></i> Gönder</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- KURUCU GİRİŞİ / PANELİ -->
+    <div id="admin-login-screen" class="screen">
+        <div class="glass-panel" style="border-color: gold; box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);">
+            <h2 style="color: gold;"><i class="fas fa-crown"></i> Kurucu Paneli Girişi</h2>
+            <input type="text" id="admin-name" placeholder="Kurucu Adı">
+            <input type="password" id="admin-pass" placeholder="Şifre">
+            <button style="background: gold; color: black;" onclick="loginAdmin()">Panele Gir</button>
+            <button style="background: transparent; border: 1px solid white;" onclick="document.getElementById('admin-login-screen').classList.remove('active-screen'); document.getElementById('register-screen').classList.add('active-screen');">Geri Dön</button>
+        </div>
+    </div>
+
+    <div id="admin-panel" class="screen">
+        <div class="glass-panel" style="max-width: 800px; width: 100%; text-align: left; max-height: 90vh; overflow-y: auto;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 10px;">
+                <h2 style="color: gold;">Kurucu Paneli</h2>
+                <a href="https://www.roblox.com/tr/users/1880633618/profile" target="_blank" style="color: white; text-decoration: none; font-size: 12px; background: rgba(255,255,255,0.1); padding: 5px 10px; border-radius: 5px;">Polat Profil</a>
+            </div>
+            
+            <h3 style="color: #00c6ff;"><i class="fas fa-users"></i> Kayıtlı Kullanıcılar (Simülasyon)</h3>
+            <ul id="user-list" style="list-style: none; padding: 10px; background: rgba(0,0,0,0.5); border-radius: 8px; margin-bottom: 20px;">
+                <!-- Kayıt olanlar buraya düşecek -->
+            </ul>
+
+            <h3 style="color: #ff416c;"><i class="fas fa-lightbulb"></i> Gelen Öneriler (Simülasyon)</h3>
+            <ul id="suggestion-list" style="list-style: none; padding: 10px; background: rgba(0,0,0,0.5); border-radius: 8px;">
+                <!-- Öneriler buraya düşecek -->
+            </ul>
+            <button style="background: transparent; border: 1px solid white; margin-top: 20px;" onclick="location.reload()">Çıkış Yap</button>
+        </div>
+    </div>
+
+    <script>
+        // MÜZİK ÇALAR SİSTEMİ (Yerel Dosyalar İçin)
+        // Kendi müzik dosyalarını (mp3) projenin klasörüne atıp isimlerini buraya yazmalısın.
+        const songs = ["sarki1.mp3", "sarki2.mp3", "sarki3.mp3"]; 
+        let currentSongIndex = 0;
+        let audio = new Audio(songs[currentSongIndex]);
+        let isPlaying = false;
+
+        function togglePlay() {
+            const btn = document.getElementById('play-pause-btn');
+            if(isPlaying) {
+                audio.pause();
+                btn.classList.remove('fa-pause');
+                btn.classList.add('fa-play');
+            } else {
+                // Tarayıcılar kullanıcı etkileşimi olmadan ses çalmaya izin vermeyebilir,
+                // Bu yüzden kullanıcı herhangi bir butona bastığında çalmayı deneyebilir.
+                audio.play().catch(e => console.log("Otomatik çalma engellendi"));
+                btn.classList.remove('fa-play');
+                btn.classList.add('fa-pause');
+            }
+            isPlaying = !isPlaying;
+        }
+
+        function nextSong() {
+            currentSongIndex = (currentSongIndex + 1) % songs.length;
+            audio.src = songs[currentSongIndex];
+            if(isPlaying) audio.play();
+        }
+
+        function prevSong() {
+            currentSongIndex = (currentSongIndex - 1 + songs.length) % songs.length;
+            audio.src = songs[currentSongIndex];
+            if(isPlaying) audio.play();
+        }
+        
+        // Şarkı bitince otomatik sonrakine geç
+        audio.addEventListener('ended', nextSong);
+
+        // SAYFA YÖNETİMİ
+        function openPage(pageId) {
+            document.getElementById(pageId).style.display = 'flex';
+        }
+        function closePages() {
+            document.querySelectorAll('.content-page').forEach(page => page.style.display = 'none');
+        }
+
+        // KAYIT SİSTEMİ (Gerçek zamanlı Firebase entegrasyonu için Backend gereklidir, bu simülasyondur)
+        function registerUser() {
+            const name = document.getElementById('reg-name').value;
+            const roblox = document.getElementById('reg-roblox').value;
+            const pass = document.getElementById('reg-pass').value;
+
+            if(name && roblox && pass) {
+                // LocalStorage'a kaydet (Simülasyon amaçlı)
+                localStorage.setItem('isRegistered', 'true');
+                localStorage.setItem('currentUserName', name);
+                
+                // Panele veri yolla (Simülasyon)
+                let users = JSON.parse(localStorage.getItem('usersList')) || [];
+                users.push({name, roblox});
+                localStorage.setItem('usersList', JSON.stringify(users));
+
+                // Ekranı değiştir
+                document.getElementById('register-screen').classList.remove('active-screen');
+                document.getElementById('main-menu').classList.add('active-screen');
+                
+                // Müzik otomatik başlasın
+                if(!isPlaying) togglePlay();
+            } else {
+                alert("Lütfen tüm alanları doldurun!");
+            }
+        }
+
+        // Sayfa yenilendiğinde tekrar kayıt sormaması için
+        window.onload = () => {
+            if(localStorage.getItem('isRegistered') === 'true') {
+                document.getElementById('register-screen').classList.remove('active-screen');
+                document.getElementById('main-menu').classList.add('active-screen');
+            }
+        }
+
+        // ÖNERİ GÖNDERME
+        function sendSuggestion() {
+            const text = document.getElementById('suggestion-text').value;
+            if(text.trim() === "") return alert("Lütfen bir şeyler yazın.");
+            
+            let suggestions = JSON.parse(localStorage.getItem('suggestionsList')) || [];
+            let author = localStorage.getItem('currentUserName') || 'Bilinmeyen Kullanıcı';
+            suggestions.push({ author: author, text: text });
+            localStorage.setItem('suggestionsList', JSON.stringify(suggestions));
+            
+            document.getElementById('suggestion-text').value = "";
+            alert("İsteğiniz kurucu paneline gönderildi!");
+        }
+
+        // KURUCU (ADMIN) SİSTEMİ
+        function showAdminLogin() {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active-screen'));
+            document.getElementById('admin-login-screen').classList.add('active-screen');
+        }
+
+        function loginAdmin() {
+            const user = document.getElementById('admin-name').value;
+            const pass = document.getElementById('admin-pass').value;
+            
+            // Senin belirlediğin bilgiler:
+            if(user === "Polat" && pass === "213141pc") {
+                document.getElementById('admin-login-screen').classList.remove('active-screen');
+                document.getElementById('admin-panel').classList.add('active-screen');
+                loadAdminData();
+            } else {
+                alert("Hatalı kurucu bilgisi!");
+            }
+        }
+
+        function loadAdminData() {
+            const userList = document.getElementById('user-list');
+            const sugList = document.getElementById('suggestion-list');
+            
+            let users = JSON.parse(localStorage.getItem('usersList')) || [];
+            let suggestions = JSON.parse(localStorage.getItem('suggestionsList')) || [];
+
+            userList.innerHTML = users.map(u => `<li style="margin-bottom:10px; border-bottom:1px solid #333; padding-bottom:5px;">👤 ${u.name} - <a href="${u.roblox}" target="_blank" style="color:#ff416c;">Roblox Profili</a></li>`).join('');
+            
+            sugList.innerHTML = suggestions.map(s => `<li style="margin-bottom:10px; border-bottom:1px solid #333; padding-bottom:5px;"><strong>${s.author}:</strong> ${s.text}</li>`).join('');
+        }
+    </script>
+</body>
+</html>
